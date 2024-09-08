@@ -18,6 +18,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.List;
+import java.util.StringTokenizer;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class RazorPayMessageHandler implements Task {
@@ -54,7 +56,11 @@ public class RazorPayMessageHandler implements Task {
             JSONObject notes  = entity.getJSONObject("notes");
             long purchaseId = Long.parseLong(notes.getString("purchase_id"));
             Purchase purchase = Database.getTable(Purchase.class).get(purchaseId);
+            StringTokenizer tokenizer  = new StringTokenizer(Config.instance().getHostName(),".");
+            String part = tokenizer.nextToken();
+
             String secret = Config.instance().getProperty(String.format("razor.pay.secret.%s",purchase.isProduction()? "prod" : "test")); //Use the default secret across all instances of razorpay.
+            secret = String.format("%s.%s",part,secret);
 
             cat.info("Sign:" + signature);
             cat.info("Payload:" + payLoad);
@@ -65,7 +71,7 @@ public class RazorPayMessageHandler implements Task {
                     JSONObject message = new JSONObject(payLoad);
                     handleMessage(message);
                 }else {
-                    throw new RuntimeException("Signature Failed");
+                    Config.instance().getLogger(getClass().getName()).log(Level.WARNING,"Signature does not match. Not for this host.");
                 }
             } catch (RazorpayException e) {
                 throw new RuntimeException(e);

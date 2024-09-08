@@ -3,6 +3,7 @@ package com.venky.swf.plugins.razorpay.extensions;
 import com.razorpay.Payment;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
+import com.venky.core.date.DateUtils;
 import com.venky.core.io.StringReader;
 import com.venky.core.math.DoubleHolder;
 import com.venky.core.util.MultiException;
@@ -13,6 +14,9 @@ import com.venky.swf.plugins.payments.db.model.payment.Purchase.PaymentStatus;
 import com.venky.swf.plugins.payments.tasks.PaymentCapture;
 import com.venky.swf.plugins.razorpay.db.model.Purchase;
 import org.json.JSONObject;
+
+import java.util.Calendar;
+import java.util.Date;
 
 public class BeforeValidatePurchase extends BeforeModelValidateExtension<Purchase> {
     static {
@@ -29,7 +33,18 @@ public class BeforeValidatePurchase extends BeforeModelValidateExtension<Purchas
         if (authorizedPaymentUpdate == null){
             authorizedPaymentUpdate = false;
         }
+        int numDaysLeftInSubscription = 0;
+        if (model.isProduction()) {
+            numDaysLeftInSubscription = model.getBuyer().getNumDaysLeftInProductionSubscription();
+        }else {
+            numDaysLeftInSubscription = model.getBuyer().getNumDaysLeftInTestSubscription();
+        }
+        if (model.getEffectiveFrom() == null) {
+            model.setEffectiveFrom(new java.sql.Date(DateUtils.addToDate(DateUtils.getStartOfDay(new Date(System.currentTimeMillis())), Calendar.DAY_OF_YEAR, numDaysLeftInSubscription).getTime()));
+        }
+
         if (model.getRawRecord().isFieldDirty("CAPTURED") && model.isCaptured() && authorizedPaymentUpdate){ // Being captured
+
             String paymentId = model.getPaymentReference();
             RazorpayClient razorpay ;
             MultiException ex = new MultiException("Payment Transaction Failed for " + paymentId);
