@@ -1,5 +1,6 @@
 package com.venky.swf.plugins.razorpay.db.model.buyers;
 
+import com.venky.cache.UnboundedCache;
 import com.venky.core.date.DateUtils;
 import com.venky.core.util.Bucket;
 import com.venky.core.util.ObjectHolder;
@@ -24,8 +25,14 @@ public class BuyerImpl<B extends Buyer & Model> extends ModelImpl<B> {
         super(proxy);
     }
 
-    Map<String,Integer> balance = null ;
+    Map<Boolean,Map<String,Integer>> balanceByEnv = new UnboundedCache<Boolean, Map<String, Integer>>() {
+        @Override
+        protected Map<String, Integer> getValue(Boolean key) {
+            return null;
+        }
+    };
     public Map<String,Integer> getBalance(boolean production){
+        Map<String,Integer>balance = balanceByEnv.get(production);
         if (balance != null){
             return balance;
         }
