@@ -12,6 +12,7 @@ import com.venky.swf.plugins.payments.db.model.payment.gateway.PaymentGateway;
 import com.venky.swf.plugins.payments.db.model.payment.gateway.PaymentLink;
 import com.venky.swf.plugins.payments.gateway.PaymentGatewayAdaptor;
 import com.venky.swf.plugins.payments.gateway.PaymentGatewayAdaptorFactory;
+import com.venky.swf.routing.Config;
 import in.succinct.beckn.BecknObject;
 import in.succinct.beckn.BecknObjectWithId;
 import in.succinct.beckn.Invoice.Invoices;
@@ -24,6 +25,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.util.Map;
+import java.util.logging.Logger;
 
 public class RazorpayAdaptor extends PaymentGatewayAdaptor{
     static{
@@ -112,8 +114,14 @@ public class RazorpayAdaptor extends PaymentGatewayAdaptor{
     
     @Override
     public void recordPayment(String eventJson, Map<String,String> headers){
+        
         String signature = headers.get("X-Razorpay-Signature");
         try {
+            Logger cat = Config.instance().getLogger(getClass().getName());
+            
+            cat.info("Sign:" + signature);
+            cat.info("Payload:" + eventJson);
+        
             if (!Utils.verifyWebhookSignature(eventJson,signature,getCred("secret"))){
                 return;
             }
@@ -125,7 +133,12 @@ public class RazorpayAdaptor extends PaymentGatewayAdaptor{
             if (!ObjectUtil.equals(jsonObject.get("event"),"payment_link.paid")){
                 return;
             }
-            RazorpayPaymentLink razorpayPaymentLink = new RazorpayPaymentLink((JSONObject)(((JSONObject)jsonObject.get("payment_link")).get("entity")));
+            RazorpayPaymentLink razorpayPaymentLink = new RazorpayPaymentLink((JSONObject)
+                    ((JSONObject)
+                            ((JSONObject)
+                                    jsonObject.get("payload")
+                            ).get("payment_link")
+                    ).get("entity"));
             PaymentLink paymentLink = Database.getTable(PaymentLink.class).newRecord();
             paymentLink.setLinkUri(razorpayPaymentLink.getShortUrl());
             paymentLink = Database.getTable(PaymentLink.class).getRefreshed(paymentLink);
