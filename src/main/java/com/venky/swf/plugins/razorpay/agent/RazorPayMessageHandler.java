@@ -65,9 +65,12 @@ public class RazorPayMessageHandler implements Task {
             
             long purchaseId = Long.parseLong(notes.getString("purchase_id"));
             Purchase purchase = Database.getTable(Purchase.class).get(purchaseId);
+            if (purchase == null){
+                return;
+            }
+            
             StringTokenizer tokenizer  = new StringTokenizer(Config.instance().getHostName(),".");
             String part = tokenizer.nextToken();
-            
             String secret = Config.instance().getProperty(String.format("razor.pay.secret.%s",purchase.isProduction()? "prod" : "test")); //Use the default secret across all instances of razorpay.
             secret = String.format("%s.%s",part,secret);
             
