@@ -53,31 +53,37 @@ public class RazorPayMessageHandler implements Task {
         }
         if (payment != null) {
             JSONObject entity = payment.get("entity");
-            JSONArray notes_array  = entity.getJSONArray("notes");
-            for (int i = 0 ; i <notes_array.length() ; i ++){
-                JSONObject notes = notes_array.getJSONObject(i);
-                long purchaseId = Long.parseLong(notes.getString("purchase_id"));
-                Purchase purchase = Database.getTable(Purchase.class).get(purchaseId);
-                StringTokenizer tokenizer  = new StringTokenizer(Config.instance().getHostName(),".");
-                String part = tokenizer.nextToken();
-                
-                String secret = Config.instance().getProperty(String.format("razor.pay.secret.%s",purchase.isProduction()? "prod" : "test")); //Use the default secret across all instances of razorpay.
-                secret = String.format("%s.%s",part,secret);
-                
-                cat.info("Sign:" + signature);
-                cat.info("Payload:" + payLoad);
-                
-                try {
-                    if (Utils.verifyWebhookSignature(payLoad,signature,secret)){
-                        cat.warning("VerifyWebHookSignature Success.!");
-                        JSONObject message = new JSONObject(payLoad);
-                        handleMessage(message);
-                    }else {
-                        Config.instance().getLogger(getClass().getName()).log(Level.WARNING,"Signature does not match. Not for this host.");
-                    }
-                } catch (RazorpayException e) {
-                    throw new RuntimeException(e);
+            Object o  = entity.get("notes");
+            JSONObject notes = null;
+            JSONArray notes_array = null;
+            if (o instanceof JSONArray){
+                notes_array = (JSONArray) o;
+                notes = notes_array.length() > 0 ? notes_array.getJSONObject(0) : null;
+            }else if (o instanceof JSONObject){
+                notes = (JSONObject) o;
+            }
+            
+            long purchaseId = Long.parseLong(notes.getString("purchase_id"));
+            Purchase purchase = Database.getTable(Purchase.class).get(purchaseId);
+            StringTokenizer tokenizer  = new StringTokenizer(Config.instance().getHostName(),".");
+            String part = tokenizer.nextToken();
+            
+            String secret = Config.instance().getProperty(String.format("razor.pay.secret.%s",purchase.isProduction()? "prod" : "test")); //Use the default secret across all instances of razorpay.
+            secret = String.format("%s.%s",part,secret);
+            
+            cat.info("Sign:" + signature);
+            cat.info("Payload:" + payLoad);
+            
+            try {
+                if (Utils.verifyWebhookSignature(payLoad,signature,secret)){
+                    cat.warning("VerifyWebHookSignature Success.!");
+                    JSONObject message = new JSONObject(payLoad);
+                    handleMessage(message);
+                }else {
+                    Config.instance().getLogger(getClass().getName()).log(Level.WARNING,"Signature does not match. Not for this host.");
                 }
+            } catch (RazorpayException e) {
+                throw new RuntimeException(e);
             }
         }
     }
