@@ -62,7 +62,9 @@ public class RazorPayMessageHandler implements Task {
             }else if (o instanceof JSONObject){
                 notes = (JSONObject) o;
             }
-            
+            if (notes == null){
+                return;
+            }
             long purchaseId = Long.parseLong(notes.getString("purchase_id"));
             Purchase purchase = Database.getTable(Purchase.class).get(purchaseId);
             if (purchase == null){
