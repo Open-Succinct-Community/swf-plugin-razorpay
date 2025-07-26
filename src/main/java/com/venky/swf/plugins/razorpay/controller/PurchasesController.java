@@ -4,22 +4,18 @@ import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.venky.core.string.StringUtil;
-import com.venky.swf.controller.ModelController;
 import com.venky.swf.controller.annotations.SingleRecordAction;
 import com.venky.swf.db.Database;
-import com.venky.swf.db.model.Model;
 import com.venky.swf.path.Path;
+import com.venky.swf.plugins.payments.db.model.payment.Buyer;
 import com.venky.swf.plugins.payments.db.model.payment.Plan;
-import com.venky.swf.plugins.razorpay.db.model.Purchase;
-import com.venky.swf.plugins.razorpay.db.model.buyers.Application;
-import com.venky.swf.plugins.razorpay.db.model.buyers.Buyer;
-import com.venky.swf.plugins.razorpay.db.model.buyers.Company;
+
+import com.venky.swf.plugins.payments.db.model.payment.Purchase;
 import com.venky.swf.views.View;
 import org.json.JSONObject;
 import org.json.simple.JSONValue;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,9 +37,9 @@ public class PurchasesController extends com.venky.swf.plugins.payments.controll
         if (purchase.getRawRecord().isNewRecord()){
             Plan plan = purchase.getPlan();
             Buyer application = purchase.getBuyer();
-            Purchase fromDb = application.getIncompletePurchase(purchase.isProduction());
+            Purchase fromDb = application.getIncompletePurchase(purchase.isProduction()).getRawRecord().getAsProxy(Purchase.class);
             if (fromDb == null) {
-                fromDb = plan.getRawRecord().getAsProxy(com.venky.swf.plugins.razorpay.db.model.Plan.class).purchase(application);
+                fromDb = plan.purchase(application);
             }
             fromDb.getRawRecord().load(purchase.getRawRecord());
             purchase = fromDb;
@@ -52,7 +48,7 @@ public class PurchasesController extends com.venky.swf.plugins.payments.controll
             throw new RuntimeException("Purchase already captured!");
         }
         try {
-            return pay(purchase);
+            return pay(purchase.getRawRecord().getAsProxy(com.venky.swf.plugins.razorpay.db.model.Purchase.class));
         }catch (RazorpayException ex){
             throw new RuntimeException(ex);
         }
@@ -60,9 +56,9 @@ public class PurchasesController extends com.venky.swf.plugins.payments.controll
     @SingleRecordAction(icon = "glyphicon-shopping-cart", tooltip = "Pay")
     public View pay(long id) throws RazorpayException {
         Purchase purchase = Database.getTable(Purchase.class).get(id);
-        return pay(purchase);
+        return pay(purchase.getRawRecord().getAsProxy(com.venky.swf.plugins.razorpay.db.model.Purchase.class));
     }
-    public View pay(Purchase purchase) throws RazorpayException{
+    public View pay(com.venky.swf.plugins.razorpay.db.model.Purchase purchase) throws RazorpayException{
         if (purchase.getReflector().isVoid(purchase.getOrderJson()) || purchase.getRawRecord().isFieldDirty("PLAN_ID")){
             RazorpayClient client = purchase.createRazorpayClient();
             JSONObject object =new JSONObject();
@@ -105,20 +101,6 @@ public class PurchasesController extends com.venky.swf.plugins.payments.controll
         return fields;
     }
 
-    @Override
-    protected Map<Class<? extends Model>, List<String>> getIncludedModelFields() {
-        Map<Class<? extends Model>, List<String>> map = super.getIncludedModelFields();
-        if (!map.containsKey(Application.class)){
-            map.put(Application.class, Arrays.asList("ID","APP_ID","CHANGE_SECRET", "TEST_BALANCE", "PRODUCTION_BALANCE"));
-        }
-        if (!map.containsKey(Company.class)){
-            map.put(Company.class, Arrays.asList("ID", "NAME","TEST_BALANCE", "PRODUCTION_BALANCE"));
-        }
-        if (!map.containsKey(Plan.class)){
-            map.put(Plan.class, Arrays.asList("ID","NAME","MAXIMUM_RETAIL_PRICE", "NUMBER_OF_CREDITS","TAX_PERCENTAGE"));
-        }
-        return map;
-    }
 
 
 }

@@ -4,10 +4,8 @@ import com.razorpay.Payment;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.venky.core.util.ObjectUtil;
-import com.venky.swf.db.model.Model;
 import com.venky.swf.db.table.ModelImpl;
 import com.venky.swf.plugins.payments.db.model.payment.Purchase.PaymentStatus;
-import com.venky.swf.plugins.razorpay.db.model.buyers.Buyer;
 import com.venky.swf.routing.Config;
 
 
@@ -51,22 +49,6 @@ public class PurchaseImpl extends ModelImpl<Purchase> {
         return PaymentStatus.valueOf(purchase.getStatus()).compareTo(PaymentStatus.authorized) < 0;
     }
 
-    public Long getBuyerId(){
-        Model b = (Model)getBuyer();
-        return b== null ? null : b.getId();
-    }
-    Buyer buyer = null;
-    public Buyer getBuyer(){
-        Purchase purchase = getProxy();
-        if (buyer == null) {
-            if (purchase.getApplicationId() != null) {
-                buyer = purchase.getApplication();
-            } else if (purchase.getCompanyId() != null) {
-                buyer = purchase.getCompany();
-            }
-        }
-        return buyer;
-    }
 
 }
 
