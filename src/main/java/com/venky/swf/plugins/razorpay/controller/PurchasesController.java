@@ -34,18 +34,19 @@ public class PurchasesController extends com.venky.swf.plugins.payments.controll
             throw new RuntimeException ("Nothing to purchase!");
         }
         Purchase purchase = purchases.get(0).getRawRecord().getAsProxy(Purchase.class);
+        
         if (purchase.getRawRecord().isNewRecord()){
             Plan plan = purchase.getPlan();
             Buyer application = purchase.getBuyer();
-            Purchase fromDb = application.getIncompletePurchase(purchase.isProduction()).getRawRecord().getAsProxy(Purchase.class);
+            Purchase fromDb = application.getIncompletePurchase(purchase.isProduction());
             if (fromDb == null) {
                 fromDb = plan.purchase(application);
             }
             fromDb.getRawRecord().load(purchase.getRawRecord());
             purchase = fromDb;
         }
-        if (purchase.isCaptured()){
-            throw new RuntimeException("Purchase already captured!");
+        if (purchase.isCaptured() && !purchase.getPlan().getReflector().isVoid(purchase.getPlan().getSellingPrice())){
+            throw new RuntimeException("Purchase was already captured!");
         }
         try {
             return pay(purchase.getRawRecord().getAsProxy(com.venky.swf.plugins.razorpay.db.model.Purchase.class));
@@ -59,7 +60,8 @@ public class PurchasesController extends com.venky.swf.plugins.payments.controll
         return pay(purchase.getRawRecord().getAsProxy(com.venky.swf.plugins.razorpay.db.model.Purchase.class));
     }
     public View pay(com.venky.swf.plugins.razorpay.db.model.Purchase purchase) throws RazorpayException{
-        if (purchase.getReflector().isVoid(purchase.getOrderJson()) || purchase.getRawRecord().isFieldDirty("PLAN_ID")){
+        if ((purchase.getReflector().isVoid(purchase.getOrderJson()) || purchase.getRawRecord().isFieldDirty("PLAN_ID") ) && !purchase.getPlan().getReflector().isVoid(purchase.getPlan().getSellingPrice())){
+            
             RazorpayClient client = purchase.createRazorpayClient();
             JSONObject object =new JSONObject();
             object.put("amount",purchase.getPlan().getSellingPrice() * 100);
