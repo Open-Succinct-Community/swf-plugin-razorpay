@@ -37,10 +37,10 @@ public class PurchasesController extends com.venky.swf.plugins.payments.controll
         
         if (purchase.getRawRecord().isNewRecord()){
             Plan plan = purchase.getPlan();
-            Buyer application = purchase.getBuyer();
-            Purchase fromDb = application.getIncompletePurchase(purchase.isProduction());
+            Buyer buyer = purchase.getBuyer();
+            Purchase fromDb = buyer.getIncompletePurchase(buyer.isProduction());
             if (fromDb == null) {
-                fromDb = plan.purchase(application);
+                fromDb = plan.purchase(buyer,buyer.isProduction());
             }
             fromDb.getRawRecord().load(purchase.getRawRecord());
             purchase = fromDb;
