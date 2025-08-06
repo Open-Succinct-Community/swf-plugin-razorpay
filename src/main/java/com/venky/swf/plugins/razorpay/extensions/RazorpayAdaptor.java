@@ -142,9 +142,10 @@ public class RazorpayAdaptor extends PaymentGatewayAdaptor{
             PaymentLink paymentLink = Database.getTable(PaymentLink.class).newRecord();
             paymentLink.setLinkUri(razorpayPaymentLink.getShortUrl());
             paymentLink = Database.getTable(PaymentLink.class).getRefreshed(paymentLink);
-            paymentLink.setAmountPaid(razorpayPaymentLink.getAmountPaid()/100.0);
+            paymentLink = Database.getTable(PaymentLink.class).lock(paymentLink.getId(),true);
             switch (razorpayPaymentLink.getRazorpayLinkStatus()){
                 case paid -> {
+                    paymentLink.setAmountPaid(razorpayPaymentLink.getAmountPaid()/100.0);
                     paymentLink.setStatus(PaymentStatus.COMPLETE.name());
                     paymentLink.setActive(false);
                 }
