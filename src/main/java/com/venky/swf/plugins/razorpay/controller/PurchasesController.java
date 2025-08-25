@@ -9,13 +9,11 @@ import com.venky.swf.db.Database;
 import com.venky.swf.path.Path;
 import com.venky.swf.plugins.payments.db.model.payment.Buyer;
 import com.venky.swf.plugins.payments.db.model.payment.Plan;
-
 import com.venky.swf.plugins.payments.db.model.payment.Purchase;
 import com.venky.swf.views.View;
+import in.succinct.json.JSONAwareWrapper;
 import org.json.JSONObject;
-import org.json.simple.JSONValue;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -88,16 +86,11 @@ public class PurchasesController extends com.venky.swf.plugins.payments.controll
         if (getIntegrationAdaptor() == null){
             fields.putAll(getFormFields());
         }else{
-            try {
-                org.json.simple.JSONObject object = (org.json.simple.JSONObject) JSONValue.parse(getPath().getRequest().getReader());
-                fields.put("INVOICE_ID",object.get("INVOICE_ID"));
-                fields.put("razorpay_payment_id",object.get("razorpay_payment_id"));
-                if (object.containsKey("razorpay_signature")) {
-                    fields.put("razorpay_signature", object.get("razorpay_signature"));
-                }
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            org.json.simple.JSONObject object = JSONAwareWrapper.parse(getPath().getInputStream());
+            fields.put("INVOICE_ID",object.get("INVOICE_ID"));
+            fields.put("razorpay_payment_id",object.get("razorpay_payment_id"));
+            if (object.containsKey("razorpay_signature")) {
+                fields.put("razorpay_signature", object.get("razorpay_signature"));
             }
         }
         return fields;

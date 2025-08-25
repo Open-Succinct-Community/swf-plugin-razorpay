@@ -21,7 +21,7 @@ public class RazorPayController extends Controller {
 
     @RequireLogin(false)
     public View push() throws IOException {
-        String signature = getPath().getRequest().getHeader("X-Razorpay-Signature");
+        String signature = getPath().getHeader("Razorpay-Signature");
         String payLoad = StringUtil.read(getPath().getInputStream());
 
         TaskManager.instance().executeAsync(new RazorPayMessageHandler(signature, payLoad), true);
